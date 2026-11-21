@@ -33,6 +33,8 @@ ffmpeg -version
 
 Then right-click any file in Finder → **Quick Actions → Convert…**, pick a format, and the converted file appears next to the original.
 
+The format window is a small SwiftUI app (`mac/picker/main.swift`) that `install.sh` compiles on your Mac with the Xcode Command Line Tools. Click a format to select it, double-click (or press Return) to convert, Esc to cancel. If it can't be built, the Quick Action falls back to the standard macOS list dialog.
+
 * If it doesn't show up, open **System Settings → General → Login Items & Extensions → Finder** (older macOS: *Privacy & Security → Extensions → Finder*) and enable **Convert…**.
 * The first time you convert a file in Desktop/Documents/Downloads, macOS may ask for permission. Allow it.
 * Remove it with `./mac/uninstall.sh`.

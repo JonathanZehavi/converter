@@ -194,6 +194,57 @@ function cleanup() {
   if (tmpDir) try { sh('/bin/rm -rf ' + q(tmpDir)); } catch (e) {}
 }
 
+// ------------------------------------------------------------------ format picker
+var PICKER = SUPPORT + '/ConvertPicker';
+
+function fileSize(path) {
+  try {
+    var n = parseInt(sh('/usr/bin/stat -f%z ' + q(path)), 10);
+    if (n < 1024) return n + ' bytes';
+    var units = ['KB', 'MB', 'GB'], v = n / 1024, i = 0;
+    while (v >= 1024 && i < 2) { v /= 1024; i++; }
+    return (v >= 100 ? v.toFixed(0) : v.toFixed(1)) + ' ' + units[i];
+  } catch (e) { return ''; }
+}
+
+/** Show the SwiftUI window (falls back to the plain list dialog). Returns an ext or null. */
+function pickTarget(known, unknown, targets) {
+  var first = known[0];
+  var kind = CONVERTER.CATEGORIES[first.category].label;
+
+  if (exists(PICKER)) {
+    var subtitle = known.length === 1
+      ? first.ext.toUpperCase() + ' · ' + kind + ' · ' + fileSize(first.path)
+      : known.length + ' files · ' + kind;
+    if (unknown.length) subtitle += ' · ' + unknown.length + ' skipped';
+    var payload = {
+      path: first.path,
+      name: known.length === 1 ? first.name : first.name + ' and ' + (known.length - 1) + ' more',
+      subtitle: subtitle,
+      targets: targets
+    };
+    try {
+      var out = sh(q(PICKER) + ' ' + q(JSON.stringify(payload))).trim();
+      return out || null;
+    } catch (e) {
+      if (e.errorNumber === 1) return null; // cancelled
+      // Any other failure: fall through to the built-in dialog.
+    }
+  }
+
+  var items = targets.map(function (t) { return t.ext.toUpperCase() + '   ·   ' + t.label; });
+  var prompt = known.length === 1
+    ? 'Convert “' + first.name + '” (' + kind + ', ' + first.ext.toUpperCase() + ') to:'
+    : 'Convert ' + known.length + ' files to:';
+  if (unknown.length) prompt += '\n(' + unknown.length + ' unsupported file' + (unknown.length > 1 ? 's' : '') + ' will be skipped)';
+  app.activate();
+  var choice = app.chooseFromList(items, {
+    withTitle: TITLE, withPrompt: prompt, defaultItems: [items[0]],
+    okButtonName: 'Convert', cancelButtonName: 'Cancel'
+  });
+  return choice ? targets[items.indexOf(choice[0])].ext : null;
+}
+
 // ------------------------------------------------------------------ main
 function run(argv) {
   if (!argv || !argv.length) {
@@ -229,20 +280,8 @@ function run(argv) {
     return;
   }
 
-  var items = targets.map(function (t) { return t.ext.toUpperCase() + '   ·   ' + t.label; });
-  var first = known[0];
-  var prompt = known.length === 1
-    ? 'Convert “' + first.name + '” (' + CONVERTER.CATEGORIES[first.category].label + ', ' + first.ext.toUpperCase() + ') to:'
-    : 'Convert ' + known.length + ' files to:';
-  if (unknown.length) prompt += '\n(' + unknown.length + ' unsupported file' + (unknown.length > 1 ? 's' : '') + ' will be skipped)';
-
-  app.activate();
-  var choice = app.chooseFromList(items, {
-    withTitle: TITLE, withPrompt: prompt, defaultItems: [items[0]],
-    okButtonName: 'Convert', cancelButtonName: 'Cancel'
-  });
-  if (!choice) return;
-  var target = targets[items.indexOf(choice[0])].ext;
+  var target = pickTarget(known, unknown, targets);
+  if (!target) return;
 
   if (!FFMPEG && known.some(function (f) { return needsFfmpeg(f, target); })) {
     askToInstallFfmpeg();
