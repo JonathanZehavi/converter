@@ -349,6 +349,54 @@ async function convertTable(file, ext, target) {
   return res.base64 ? new Blob([bytesFromBase64(res.base64)], { type }) : new Blob([res.text], { type: type + ';charset=utf-8' });
 }
 
+// ------------------------------------------------------------------ merge
+export const canMerge = (infos) => C.canMerge(infos);
+
+/**
+ * Merge PDFs and images into one PDF, in the given order.
+ * entries: [{ file, info }]. Returns { blob, pages }.
+ */
+export async function mergeToPdf(entries, { onProgress } = {}) {
+  await loadScript('vendor/pdf-lib.min.js');
+  const { PDFDocument } = window.PDFLib;
+  const out = await PDFDocument.create();
+
+  for (let i = 0; i < entries.length; i++) {
+    const { file, info } = entries[i];
+    if (info.category === 'pdf') {
+      try {
+        const src = await PDFDocument.load(await file.arrayBuffer());
+        const pages = await out.copyPages(src, src.getPageIndices());
+        pages.forEach((p) => out.addPage(p));
+      } catch (e) {
+        throw new Error(/encrypt/i.test(String(e && e.message))
+          ? `“${file.name}” is password-protected. Remove the password and try again.`
+          : `“${file.name}” is damaged or isn’t a real PDF.`);
+      }
+    } else {
+      const img = await embedImage(out, file, info.ext);
+      const scale = Math.min(0.75, 842 / Math.max(img.width, img.height));
+      const w = img.width * scale;
+      const h = img.height * scale;
+      out.addPage([w, h]).drawImage(img, { x: 0, y: 0, width: w, height: h });
+    }
+    if (onProgress) onProgress((i + 1) / entries.length);
+  }
+
+  const bytes = await out.save();
+  return { blob: new Blob([bytes], { type: 'application/pdf' }), pages: out.getPageCount() };
+}
+
+async function embedImage(doc, file, ext) {
+  try {
+    if (ext === 'jpg') return await doc.embedJpg(await file.arrayBuffer());
+    if (ext === 'png') return await doc.embedPng(await file.arrayBuffer());
+  } catch { /* unusual JPEG/PNG variant: re-encode below */ }
+  const img = await decodeImage(file, ext);
+  const canvas = drawToCanvas(img, ext);
+  return doc.embedPng(await (await canvasBlob(canvas, 'image/png')).arrayBuffer());
+}
+
 // ------------------------------------------------------------------ entry point
 /**
  * Convert a File. `info` comes from detect(). Returns a Blob.

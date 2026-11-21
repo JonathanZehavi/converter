@@ -13,6 +13,8 @@ struct Target: Decodable, Identifiable, Hashable {
     let ext: String
     let label: String
     let group: String
+    let badge: String?   // text on the tile (defaults to the extension)
+    let title: String?   // button text (defaults to "Convert to EXT")
     var id: String { ext }
 }
 
@@ -59,6 +61,7 @@ let groupColors: [String: [Color]] = [
     "Image": [rgb(79, 178, 255), rgb(20, 116, 240)],
     "Document": [rgb(142, 155, 176), rgb(94, 107, 128)],
     "Data & Sheets": [rgb(76, 211, 122), rgb(34, 162, 76)],
+    "Merge": [rgb(255, 122, 110), rgb(229, 55, 43)],
 ]
 
 func colors(for group: String) -> [Color] {
@@ -87,7 +90,7 @@ struct FormatTile: View {
     var body: some View {
         let tint = colors(for: target.group)
         VStack(spacing: 6) {
-            Text(target.ext.uppercased())
+            Text(target.badge ?? target.ext.uppercased())
                 .font(.system(size: 16, weight: .heavy, design: .rounded))
                 .foregroundColor(.white)
                 .frame(width: 62, height: 42)
@@ -131,6 +134,11 @@ struct PickerView: View {
     init(payload: Payload) {
         self.payload = payload
         _selected = State(initialValue: payload.targets[0].ext)
+    }
+
+    var buttonTitle: String {
+        let target = payload.targets.first { $0.ext == selected }
+        return target?.title ?? "Convert to \(selected.uppercased())"
     }
 
     var groups: [FormatGroup] {
@@ -209,7 +217,7 @@ struct PickerView: View {
                 Spacer()
                 Button("Cancel") { finish(nil) }
                     .keyboardShortcut(.cancelAction)
-                Button("Convert to \(selected.uppercased())") { finish(selected) }
+                Button(buttonTitle) { finish(selected) }
                     .keyboardShortcut(.defaultAction)
             }
             .padding(.horizontal, 20)

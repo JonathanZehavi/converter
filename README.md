@@ -41,6 +41,11 @@ The format window is a small SwiftUI app (`mac/picker/main.swift`) that `install
 
 Engines on the Mac: `ffmpeg` for audio/video (with Apple's `afconvert` as a fallback for M4A/WAV/AIFF/FLAC), `sips` for images, `textutil` for documents, and SheetJS/js-yaml for data.
 
+### Merging PDFs
+
+Select two or more PDFs (images work too: each becomes a page) → right-click → **Quick Actions → Convert…** → **Merge into PDF**.
+Pages are ordered by file name (`page 2` before `page 10`) and saved as `Merged.pdf` next to the first file. On the website, drag rows to set the order.
+
 ## Website
 
 Static files, no build step. Locally:
@@ -62,6 +67,7 @@ Audio/video run on [ffmpeg.wasm](https://ffmpegwasm.netlify.app/). The ~30 MB en
 | Image | jpg png gif webp heic avif bmp tiff ico svg | jpg png webp gif tiff bmp ico pdf · heic (Mac only) · animated GIF → mp4/webm/mov |
 | Document | docx doc odt rtf html md txt | Mac: docx doc odt rtf html txt · Web: html txt (from docx/md/html/txt) |
 | Data & Sheets | xlsx xls ods csv tsv json yaml | xlsx ods csv tsv json yaml html |
+| PDF (merge) | pdf + any image above | one combined PDF |
 
 ## Known limits
 

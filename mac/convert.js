@@ -152,6 +152,56 @@ function convertTable(file, target, out) {
   if (res.base64) writeBase64(out, res.base64); else writeText(out, res.text);
 }
 
+// Merge PDFs + images into one PDF with PDFKit (built into macOS).
+function mergePdf(files, out) {
+  try { ObjC.import('PDFKit'); } catch (e) { ObjC.import('Quartz'); }
+  ObjC.import('AppKit');
+  var doc = $.PDFDocument.alloc.init;
+  var pages = [];
+  files.forEach(function (f) {
+    if (f.ext === 'pdf') {
+      var src = $.PDFDocument.alloc.initWithURL($.NSURL.fileURLWithPath(f.path));
+      if (src.isNil()) throw new Error(f.name + ' is damaged or isn’t a real PDF');
+      if (src.isLocked) throw new Error(f.name + ' is password-protected');
+      for (var i = 0; i < src.pageCount; i++) pages.push(src.pageAtIndex(i));
+    } else {
+      var path = f.path;
+      if (f.ext === 'svg') {
+        var dir = tmp('svg');
+        sh('/bin/mkdir -p ' + q(dir) + ' && /usr/bin/qlmanage -t -s 2048 -o ' + q(dir) + ' ' + q(path) + ' >/dev/null 2>&1');
+        path = dir + '/' + f.name + '.png';
+      }
+      var img = $.NSImage.alloc.initWithContentsOfFile(path);
+      if (img.isNil()) throw new Error(f.name + ' could not be read as an image');
+      var page = $.PDFPage.alloc.initWithImage(img);
+      if (page.isNil()) throw new Error(f.name + ' could not be added');
+      pages.push(page);
+    }
+  });
+  // Collect first, insert after: a page joining a new document may leave its old one.
+  pages.forEach(function (p) { doc.insertPageAtIndex(p, doc.pageCount); });
+  if (!doc.writeToFile(out)) throw new Error('Could not write ' + out.split('/').pop());
+  return doc.pageCount;
+}
+
+function runMerge(known) {
+  var files = known.slice().sort(function (a, b) { return CONVERTER.compareNames(a.name, b.name); });
+  var dir = files[0].path.substring(0, files[0].path.lastIndexOf('/'));
+  var out = dir + '/Merged.pdf';
+  for (var n = 2; exists(out); n++) out = dir + '/Merged ' + n + '.pdf';
+  try {
+    var count = mergePdf(files, out);
+    app.displayNotification(out.split('/').pop() + ' · ' + count + ' page' + (count === 1 ? '' : 's'),
+      { withTitle: 'Merged ' + files.length + ' files', soundName: 'Glass' });
+    sh('/usr/bin/open -R ' + q(out));
+  } catch (e) {
+    if (exists(out)) fm.removeItemAtPathError(out, null);
+    alert('Merging failed', String(e.message || e));
+  } finally {
+    cleanup();
+  }
+}
+
 function convertOne(file, target, out) {
   switch (file.category) {
     case 'video': case 'audio': return convertMedia(file, target, out);
@@ -215,7 +265,7 @@ function pickTarget(known, unknown, targets) {
   if (exists(PICKER)) {
     var subtitle = known.length === 1
       ? first.ext.toUpperCase() + ' · ' + kind + ' · ' + fileSize(first.path)
-      : known.length + ' files · ' + kind;
+      : known.length + ' files' + (known.every(function (f) { return f.category === first.category; }) ? ' · ' + kind : '');
     if (unknown.length) subtitle += ' · ' + unknown.length + ' skipped';
     var payload = {
       path: first.path,
@@ -232,7 +282,9 @@ function pickTarget(known, unknown, targets) {
     }
   }
 
-  var items = targets.map(function (t) { return t.ext.toUpperCase() + '   ·   ' + t.label; });
+  var items = targets.map(function (t) {
+    return t.title ? t.title + '   ·   ' + t.label : t.ext.toUpperCase() + '   ·   ' + t.label;
+  });
   var prompt = known.length === 1
     ? 'Convert “' + first.name + '” (' + kind + ', ' + first.ext.toUpperCase() + ') to:'
     : 'Convert ' + known.length + ' files to:';
@@ -275,6 +327,14 @@ function run(argv) {
   var targets = CONVERTER.targetsFor(known[0].ext, macSupports).filter(function (t) {
     return lists.every(function (l) { return l.indexOf(t.ext) >= 0; });
   });
+  if (CONVERTER.canMerge(known)) {
+    // PDFs only -> merging is the whole menu; images -> offered after the conversions.
+    if (targets.length) targets.push(CONVERTER.MERGE_TARGET); else targets = [CONVERTER.MERGE_TARGET];
+  }
+  if (!targets.length && known.length === 1 && known[0].category === 'pdf') {
+    alert('Select two or more files to merge', 'Select several PDFs (or PDFs and images) in Finder, then right-click → Quick Actions → Convert… to merge them into one PDF.');
+    return;
+  }
   if (!targets.length) {
     alert('No common format', 'These files are different kinds. Select files of the same kind (for example, only videos) and try again.');
     return;
@@ -282,6 +342,7 @@ function run(argv) {
 
   var target = pickTarget(known, unknown, targets);
   if (!target) return;
+  if (target === CONVERTER.MERGE_TARGET.ext) return runMerge(known);
 
   if (!FFMPEG && known.some(function (f) { return needsFfmpeg(f, target); })) {
     askToInstallFfmpeg();

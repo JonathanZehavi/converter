@@ -1,4 +1,4 @@
-import { detect, targetsFor, convert } from './engine.js';
+import { detect, targetsFor, convert, mergeToPdf } from './engine.js';
 
 const C = window.CONVERTER;
 const $ = (id) => document.getElementById(id);
@@ -8,7 +8,8 @@ const ICONS = {
   audio: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
   document: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
-  table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/>'
+  table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/>',
+  pdf: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8 13h3M8 17h8"/>'
 };
 const X_ICON = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 
@@ -29,7 +30,9 @@ function renderSidebar() {
     detail.hidden = true;
     const writes = [...new Set(cat.inputs.flatMap((e) => targetsFor(e).map((t) => t.ext)))];
     const chips = (arr) => `<div class="chips">${arr.map((e) => `<span class="chip">${e.toUpperCase()}</span>`).join('')}</div>`;
-    detail.innerHTML = `<b>Opens</b>${chips(cat.inputs)}<b>Saves as</b>${chips(writes)}`;
+    detail.innerHTML = writes.length
+      ? `<b>Opens</b>${chips(cat.inputs)}<b>Saves as</b>${chips(writes)}`
+      : `<b>Opens</b>${chips(cat.inputs)}<b>Combine</b><div class="chips"><span class="chip">PDFs + images → one PDF</span></div>`;
     btn.addEventListener('click', () => {
       const open = btn.getAttribute('aria-expanded') === 'true';
       btn.setAttribute('aria-expanded', String(!open));
@@ -63,7 +66,7 @@ async function addFiles(fileList) {
     const item = {
       id: nextId++, file, info, targets,
       target: targets[0] ? targets[0].ext : null,
-      state: info && targets.length ? 'idle' : 'unsupported',
+      state: info && targets.length ? 'idle' : (info && info.category === 'pdf' ? 'mergeOnly' : 'unsupported'),
       progress: 0, message: '', result: null, url: null
     };
     items.push(item);
@@ -87,11 +90,55 @@ function buildRow(item) {
   li.querySelector('.file-name').textContent = item.file.name;
   li.querySelector('.file-name').title = item.file.name;
   li.querySelector('.remove').addEventListener('click', () => removeItem(item));
+  enableReorder(li, item);
   return li;
+}
+
+// ------------------------------------------------------------------ drag to reorder
+let draggedItem = null;
+
+function clearDropMarks() {
+  document.querySelectorAll('.drop-before, .drop-after').forEach((el) => el.classList.remove('drop-before', 'drop-after'));
+}
+
+function enableReorder(li, item) {
+  li.draggable = true;
+  li.addEventListener('dragstart', (e) => {
+    if (e.target.closest('select, button')) { e.preventDefault(); return; }
+    draggedItem = item;
+    li.classList.add('dragging-row');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(item.id));
+  });
+  li.addEventListener('dragend', () => {
+    li.classList.remove('dragging-row');
+    draggedItem = null;
+    clearDropMarks();
+  });
+  li.addEventListener('dragover', (e) => {
+    if (!draggedItem || draggedItem === item) return;
+    e.preventDefault();
+    const r = li.getBoundingClientRect();
+    const after = e.clientY > r.top + r.height / 2;
+    clearDropMarks();
+    li.classList.add(after ? 'drop-after' : 'drop-before');
+  });
+  li.addEventListener('drop', (e) => {
+    if (!draggedItem || draggedItem === item) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const after = li.classList.contains('drop-after');
+    clearDropMarks();
+    items.splice(items.indexOf(draggedItem), 1);
+    items.splice(items.indexOf(item) + (after ? 1 : 0), 0, draggedItem);
+    li[after ? 'after' : 'before'](draggedItem.el);
+    refresh();
+  });
 }
 
 function removeItem(item) {
   if (item.state === 'working') return;
+  mergeError = '';
   if (item.url) URL.revokeObjectURL(item.url);
   item.el.remove();
   items.splice(items.indexOf(item), 1);
@@ -144,7 +191,10 @@ function renderRow(item) {
   const meta = item.el.querySelector('.file-meta');
   const actions = item.el.querySelector('.file-actions');
   const remove = item.el.querySelector('.remove');
-  const typeLabel = item.info ? `${item.info.ext.toUpperCase()} · ${C.CATEGORIES[item.info.category].label}` : 'Unknown type';
+  const catLabel = item.info ? C.CATEGORIES[item.info.category].label : '';
+  const typeLabel = !item.info ? 'Unknown type'
+    : item.info.ext.toUpperCase() === catLabel ? `${catLabel} document`
+    : `${item.info.ext.toUpperCase()} · ${catLabel}`;
   meta.className = 'file-meta';
   actions.replaceChildren();
   remove.hidden = item.state === 'working';
@@ -154,6 +204,9 @@ function renderRow(item) {
     case 'unsupported':
       meta.classList.add('error');
       meta.textContent = `${formatSize(item.file.size)} · This file type can’t be converted`;
+      break;
+    case 'mergeOnly':
+      meta.textContent = `${typeLabel} · ${formatSize(item.file.size)} · Ready to merge`;
       break;
     case 'idle':
       meta.textContent = `${typeLabel} · ${formatSize(item.file.size)}`;
@@ -166,8 +219,8 @@ function renderRow(item) {
     case 'done': {
       meta.classList.add('done');
       const name = C.outputName(item.file.name, item.target);
-      meta.textContent = `✓ ${name} · ${formatSize(item.result.size)}`;
-      actions.append(targetSelect(item));
+      meta.textContent = `✓ ${name} · ${formatSize(item.result.size)}` + (item.note ? ` · ${item.note}` : '');
+      if (item.targets.length) actions.append(targetSelect(item));
       if (canShareFiles) actions.append(button('Share', '', () => share(item)));
       actions.append(button('Download', 'primary', () => download(item)));
       break;
@@ -205,7 +258,52 @@ function refresh() {
   $('clearBtn').hidden = total === 0 || working;
   $('status').textContent = total === 0 ? 'No files'
     : `${total} file${total > 1 ? 's' : ''}` + (done ? ` · ${done} converted` : '');
-  $('subtitle').textContent = working ? 'Converting on this device…' : 'Private · on-device';
+  $('subtitle').textContent = working || merging ? 'Converting on this device…' : 'Private · on-device';
+
+  const mergeable = mergeCandidates();
+  $('mergeBar').hidden = mergeable.length < 2;
+  $('mergeTitle').textContent = merging ? 'Merging…' : `Merge ${mergeable.length} files into one PDF`;
+  $('mergeBtn').disabled = merging || working;
+  const hint = $('mergeHint');
+  hint.textContent = mergeError || 'Pages follow the list order. Drag rows to reorder.';
+  hint.classList.toggle('error', !!mergeError);
+}
+
+// ------------------------------------------------------------------ merge
+let merging = false;
+let mergeError = '';
+
+function mergeCandidates() {
+  return items.filter((i) => i.info && !i.isMergeResult &&
+    (i.info.category === 'pdf' || i.info.category === 'image'));
+}
+
+async function mergeAll() {
+  const entries = mergeCandidates();
+  if (entries.length < 2 || merging) return;
+  merging = true;
+  mergeError = '';
+  refresh();
+  try {
+    const { blob, pages } = await mergeToPdf(entries.map((i) => ({ file: i.file, info: i.info })));
+    const file = new File([blob], 'Merged.pdf', { type: 'application/pdf' });
+    const item = {
+      id: nextId++, file, info: { ext: 'pdf', category: 'pdf' }, targets: [], target: 'pdf',
+      state: 'done', progress: 0, message: '', result: blob, url: URL.createObjectURL(blob),
+      note: `${pages} page${pages === 1 ? '' : 's'}`, isMergeResult: true
+    };
+    items.unshift(item);
+    item.el = buildRow(item);
+    $('fileList').prepend(item.el);
+    renderRow(item);
+    item.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  } catch (e) {
+    console.error(e);
+    mergeError = (e && e.message) || 'Merging failed.';
+  } finally {
+    merging = false;
+    refresh();
+  }
 }
 
 // ------------------------------------------------------------------ actions
@@ -260,6 +358,7 @@ $('fileInput').addEventListener('change', (e) => { addFiles([...e.target.files])
 $('chooseBtn').addEventListener('click', openPicker);
 $('addBtn').addEventListener('click', openPicker);
 $('convertAllBtn').addEventListener('click', convertAll);
+$('mergeBtn').addEventListener('click', mergeAll);
 $('clearBtn').addEventListener('click', () => [...items].forEach(removeItem));
 
 let dragDepth = 0;

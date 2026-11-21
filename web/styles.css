@@ -277,6 +277,7 @@ svg { display: block; }
 .cat-image { background: linear-gradient(180deg, #4fb2ff, #1474f0); }
 .cat-document { background: linear-gradient(180deg, #8e9bb0, #5e6b80); }
 .cat-table { background: linear-gradient(180deg, #4cd37a, #22a24c); }
+.cat-pdf { background: linear-gradient(180deg, #ff7a6e, #e5372b); }
 .cat-unknown { background: linear-gradient(180deg, #c7c7cc, #9a9aa0); }
 
 .file-info { min-width: 0; }
@@ -336,6 +337,32 @@ svg { display: block; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ------------------------------------------------------------ merge */
+.merge-bar {
+  display: flex; align-items: center; gap: 12px;
+  margin: 16px 18px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  border: 0.5px solid var(--separator);
+}
+.merge-bar[hidden] { display: none; }
+.merge-icon {
+  width: 32px; height: 32px; border-radius: 8px; flex: none;
+  display: grid; place-items: center;
+  background: linear-gradient(180deg, #ff7a6e, #e5372b);
+}
+.merge-icon svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.merge-text { flex: 1; min-width: 0; }
+.merge-text strong { display: block; font-size: 13px; }
+.merge-text span { display: block; font-size: 11.5px; color: var(--text-2); }
+.merge-text span.error { color: var(--red); }
+
+.file[draggable="true"] .tile { cursor: grab; }
+.file.dragging-row { opacity: 0.45; }
+.file.drop-before { box-shadow: 0 -3px 0 0 var(--accent); }
+.file.drop-after { box-shadow: 0 3px 0 0 var(--accent); }
+
 /* ------------------------------------------------------------ status bar */
 .statusbar {
   display: flex; align-items: center; justify-content: space-between;
@@ -383,6 +410,9 @@ svg { display: block; }
   .file .remove { grid-column: 3; grid-row: 1; }
   .progress { grid-column: 1 / -1; margin-top: 0; }
   .empty h2 { font-size: 20px; }
+  .merge-bar { margin: 12px 12px 0; flex-wrap: wrap; }
+  .merge-bar .btn { width: 100%; height: 34px; font-size: 15px; }
+  .merge-text span:not(.error) { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

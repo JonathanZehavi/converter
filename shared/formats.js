@@ -34,8 +34,16 @@ var CONVERTER = (function () {
       label: 'Data & Sheets',
       inputs: ['xlsx', 'xls', 'ods', 'csv', 'tsv', 'json', 'yaml'],
       targets: ['xlsx', 'ods', 'csv', 'tsv', 'json', 'yaml', 'html']
+    },
+    pdf: {
+      label: 'PDF',
+      inputs: ['pdf'],
+      targets: [] // PDFs are merged, not converted (see canMerge)
     }
   };
+
+  // Several PDFs and/or images can be merged into one PDF, in the given order.
+  var MERGE_TARGET = { ext: 'merge-pdf', label: 'One PDF, in order', group: 'Merge', badge: 'PDF', title: 'Merge into PDF' };
 
   // Animated GIFs can also become real video files.
   var EXTRA_TARGETS = { gif: ['mp4', 'webm', 'mov'] };
@@ -131,6 +139,7 @@ var CONVERTER = (function () {
     if (b[0] === 0x30 && b[1] === 0x26 && b[2] === 0xB2 && b[3] === 0x75) return 'wmv';
     if (b[0] === 0 && b[1] === 0 && b[2] === 1 && b[3] === 0xBA) return 'mpg';
     if (b[0] === 0x47 && b.length > 188 && b[188] === 0x47) return 'ts';
+    if (h4 === '%PDF') return 'pdf';
     if (h4 === '{\\rt') return 'rtf';
     if (b[0] === 0 && b[1] === 0 && b[2] === 1 && b[3] === 0) return 'ico';
     if (b[0] === 0x42 && b[1] === 0x4D && b.length > 14) return 'bmp';
@@ -221,6 +230,21 @@ var CONVERTER = (function () {
     return [];
   }
 
+  /** True when these detected files ({ext, category}) can be merged into one PDF. */
+  function canMerge(infos) {
+    if (!infos || infos.length < 2) return false;
+    for (var i = 0; i < infos.length; i++) {
+      var f = infos[i];
+      if (!f || (f.category !== 'pdf' && f.category !== 'image')) return false;
+    }
+    return true;
+  }
+
+  /** Natural filename order: "page 2" before "page 10". */
+  function compareNames(a, b) {
+    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+  }
+
   // ---------------------------------------------------------------- helpers
   function outputName(name, target) {
     var base = String(name).split('/').pop();
@@ -256,6 +280,9 @@ var CONVERTER = (function () {
     detect: detect,
     targetsFor: targetsFor,
     ffmpegArgs: ffmpegArgs,
+    MERGE_TARGET: MERGE_TARGET,
+    canMerge: canMerge,
+    compareNames: compareNames,
     outputName: outputName,
     escapeHtml: escapeHtml,
     htmlDocument: htmlDocument
