@@ -49,7 +49,7 @@ Static files, no build step. Locally:
 python3 -m http.server 8000   # then open http://localhost:8000/web/
 ```
 
-To publish: **Settings → Pages → Source: GitHub Actions**. The included workflow deploys on every push to `main`.
+To publish: **Settings → Pages → Source: GitHub Actions**. The included workflow deploys on every push to `dev`.
 
 Audio/video run on [ffmpeg.wasm](https://ffmpegwasm.netlify.app/). The ~30 MB engine is downloaded once from jsDelivr and cached; your files never leave the browser.
 
