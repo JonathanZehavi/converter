@@ -73,6 +73,8 @@ var SIPS_FORMAT = { jpg: 'jpeg', png: 'png', tiff: 'tiff', gif: 'gif', bmp: 'bmp
 var TEXTUTIL_IN = ['txt', 'html', 'rtf', 'doc', 'docx', 'odt', 'md'];
 var TEXTUTIL_OUT = ['txt', 'html', 'rtf', 'doc', 'docx', 'odt'];
 var VIDEO_FROM_IMAGE = ['mp4', 'webm', 'mov'];
+var DOCTOOL = SUPPORT + '/DocTool';   // built by install.sh: document → PDF, PDF → Word/RTF/text/images
+var PDF_OUT = ['docx', 'rtf', 'txt', 'html', 'jpg', 'png'];
 
 // Built-in afconvert covers common audio when ffmpeg is missing.
 var AFCONVERT = {
@@ -82,7 +84,11 @@ var AFCONVERT = {
 var AFCONVERT_IN = ['mp3', 'wav', 'flac', 'm4a', 'aac', 'aiff', 'caf', 'alac', 'm4b'];
 
 function macSupports(src, target, cat) {
-  if (cat === 'document') return TEXTUTIL_IN.indexOf(src) >= 0 && TEXTUTIL_OUT.indexOf(target) >= 0;
+  if (cat === 'document') {
+    if (TEXTUTIL_IN.indexOf(src) < 0) return false;
+    return TEXTUTIL_OUT.indexOf(target) >= 0 || (target === 'pdf' && exists(DOCTOOL));
+  }
+  if (cat === 'pdf') return exists(DOCTOOL) && PDF_OUT.indexOf(target) >= 0;
   return true;
 }
 
@@ -140,6 +146,10 @@ function convertDocument(file, target, out) {
     writeText(src, html);
   } else if (file.ext === 'txt') {
     extra = ' -inputencoding UTF-8';
+  }
+  if (target === 'pdf') {
+    sh(q(DOCTOOL) + ' topdf ' + q(src) + ' ' + q(out));
+    return;
   }
   sh('/usr/bin/textutil' + extra + ' -convert ' + target + ' -output ' + q(out) + ' ' + q(src));
 }
@@ -202,8 +212,20 @@ function runMerge(known) {
   }
 }
 
+/** PDF → Word/RTF/HTML/text, or one image per page. Returns the list of files written. */
+function convertPdf(file, target, out) {
+  if (target === 'jpg' || target === 'png') {
+    var base = out.replace(/\.[^.\/]+$/, '');
+    return sh(q(DOCTOOL) + ' pdfimages ' + q(file.path) + ' ' + q(base) + ' ' + target)
+      .split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+  }
+  sh(q(DOCTOOL) + ' pdftext ' + q(file.path) + ' ' + q(out) + ' ' + target);
+  return [out];
+}
+
 function convertOne(file, target, out) {
   switch (file.category) {
+    case 'pdf': return convertPdf(file, target, out);
     case 'video': case 'audio': return convertMedia(file, target, out);
     case 'image': return convertImage(file, target, out);
     case 'document': return convertDocument(file, target, out);
@@ -264,7 +286,7 @@ function pickTarget(known, unknown, targets) {
 
   if (exists(PICKER)) {
     var subtitle = known.length === 1
-      ? first.ext.toUpperCase() + ' · ' + kind + ' · ' + fileSize(first.path)
+      ? (first.ext.toUpperCase() === kind ? kind + ' document' : first.ext.toUpperCase() + ' · ' + kind) + ' · ' + fileSize(first.path)
       : known.length + ' files' + (known.every(function (f) { return f.category === first.category; }) ? ' · ' + kind : '');
     if (unknown.length) subtitle += ' · ' + unknown.length + ' skipped';
     var payload = {
@@ -328,8 +350,9 @@ function run(argv) {
     return lists.every(function (l) { return l.indexOf(t.ext) >= 0; });
   });
   if (CONVERTER.canMerge(known)) {
-    // PDFs only -> merging is the whole menu; images -> offered after the conversions.
-    if (targets.length) targets.push(CONVERTER.MERGE_TARGET); else targets = [CONVERTER.MERGE_TARGET];
+    // Several PDFs: merging comes first. Images: offered after the conversions.
+    var allPdf = known.every(function (f) { return f.category === 'pdf'; });
+    if (allPdf) targets.unshift(CONVERTER.MERGE_TARGET); else targets.push(CONVERTER.MERGE_TARGET);
   }
   if (!targets.length && known.length === 1 && known[0].category === 'pdf') {
     alert('Select two or more files to merge', 'Select several PDFs (or PDFs and images) in Finder, then right-click → Quick Actions → Convert… to merge them into one PDF.');
@@ -354,9 +377,10 @@ function run(argv) {
     known.forEach(function (f) {
       var out = uniqueOutput(f.path, target);
       try {
-        convertOne(f, target, out);
-        if (!exists(out)) throw new Error('No output was produced');
-        done.push(out);
+        var produced = convertOne(f, target, out);
+        var outs = Array.isArray(produced) && produced.length ? produced : [out];
+        if (!exists(outs[0])) throw new Error('No output was produced');
+        done.push.apply(done, outs);
       } catch (e) {
         if (exists(out)) fm.removeItemAtPathError(out, null);
         failed.push(f.name + ': ' + String(e.message || e).split('\n')[0].slice(0, 200));

@@ -66,11 +66,15 @@ Audio/video run on [ffmpeg.wasm](https://ffmpegwasm.netlify.app/). The ~30 MB en
 | Video | mp4 m4v mov avi mkv webm wmv flv mpg ts mts m2ts 3gp ogv vob | mp4 mov mkv webm avi gif · audio: mp3 m4a wav flac ogg opus |
 | Audio | mp3 wav flac m4a aac ogg opus aiff wma caf amr ac3 alac m4b | mp3 m4a wav flac ogg opus aiff aac |
 | Image | jpg png gif webp heic avif bmp tiff ico svg | jpg png webp gif tiff bmp ico pdf · heic (Mac only) · animated GIF → mp4/webm/mov |
-| Document | docx doc odt rtf html md txt | Mac: docx doc odt rtf html txt · Web: html txt (from docx/md/html/txt) |
+| Document | docx doc odt rtf html md txt | **pdf** · Mac: docx doc odt rtf html txt · Web: docx (from md/html/txt) html txt |
 | Data & Sheets | xlsx xls ods csv tsv json yaml | xlsx ods csv tsv json yaml html |
-| PDF (merge) | pdf + any image above | one combined PDF |
+| PDF | pdf | Word · RTF (Mac) · TXT · HTML — **text only, layout isn't kept** · JPG/PNG (one image per page) |
+| PDF (merge) | several PDFs + any image above | one combined PDF |
 
 ## Known limits
+
+* **PDF → Word keeps the text, not the layout.** Tables, columns and exact positions are lost (on the Mac fonts, sizes and bold survive). A scanned PDF has no text at all: convert it to JPG/PNG.
+* **Document → PDF on the website** opens the browser's print dialog: choose *Save as PDF*. Browsers can't write a text PDF silently; the Mac Quick Action saves it directly.
 
 * Converting only works within a family. A video can't become a Word document.
 * In the browser, very large videos (over ~1–2 GB, less on iPhone) can run out of memory. Use the Mac Quick Action for those.

@@ -7,6 +7,7 @@
 
 import { FFmpeg } from './vendor/ffmpeg/index.js';
 import { toBlobURL } from './vendor/ffmpeg-util/index.js';
+import { htmlToBlocks, blocksToDocx, blocksToHtml, blocksToText, pdfToBlocks, pdfToImages } from './documents.js';
 
 const C = window.CONVERTER;
 const T = window.CONVERTER_TABLE;
@@ -16,11 +17,13 @@ const FFMPEG_CORE = window.CONVERTER_FFMPEG_CORE ||
 
 // ------------------------------------------------------------------ capability
 const DOC_IN = ['md', 'docx', 'html', 'txt'];
-const DOC_OUT = ['html', 'txt'];
+const DOC_OUT = ['pdf', 'docx', 'html', 'txt'];
+const PDF_OUT = ['docx', 'txt', 'html', 'jpg', 'png'];
 
 export function supports(src, target, category) {
   if (category === 'image') return target !== 'heic';           // browsers can't encode HEIC
   if (category === 'document') return DOC_IN.includes(src) && DOC_OUT.includes(target);
+  if (category === 'pdf') return PDF_OUT.includes(target);
   return true;
 }
 
@@ -301,14 +304,13 @@ function textToHtml(text) {
 
 async function convertDocument(file, ext, target) {
   const title = file.name.replace(/\.[^.]+$/, '');
-  let html;
+  const textBlob = (t) => new Blob([t], { type: 'text/plain;charset=utf-8' });
+  let html;          // body HTML
+  let page = null;   // a complete HTML page, when the source already is one
   if (ext === 'docx') {
     await loadScript('vendor/mammoth.browser.min.js');
     const arrayBuffer = await file.arrayBuffer();
-    if (target === 'txt') {
-      const r = await window.mammoth.extractRawText({ arrayBuffer });
-      return new Blob([r.value], { type: 'text/plain;charset=utf-8' });
-    }
+    if (target === 'txt') return textBlob((await window.mammoth.extractRawText({ arrayBuffer })).value);
     html = (await window.mammoth.convertToHtml({ arrayBuffer })).value;
   } else {
     const text = await file.text();
@@ -316,13 +318,35 @@ async function convertDocument(file, ext, target) {
       await loadScript('../shared/vendor/marked.umd.js');
       html = window.marked.parse(text);
     } else if (ext === 'html') {
-      if (target === 'txt') return new Blob([htmlToText(text)], { type: 'text/plain;charset=utf-8' });
+      page = text;
+      const body = new DOMParser().parseFromString(text, 'text/html').body;
+      html = body ? body.innerHTML : text;
     } else {
       html = textToHtml(text);
     }
   }
-  if (target === 'txt') return new Blob([htmlToText(html)], { type: 'text/plain;charset=utf-8' });
-  return new Blob([C.htmlDocument(title, html)], { type: 'text/html;charset=utf-8' });
+  switch (target) {
+    case 'txt': return textBlob(htmlToText(html));
+    case 'docx': return blocksToDocx(htmlToBlocks(html));
+    case 'pdf': {
+      // Browsers can't silently write a PDF with real, selectable text — but their print engine can.
+      // The page is opened in the print dialog, where "Save as PDF" produces it.
+      const blob = new Blob([page || C.htmlDocument(title, html)], { type: 'text/html;charset=utf-8' });
+      blob.printable = true;
+      blob.fileName = title + '.pdf';
+      return blob;
+    }
+    default: return new Blob([C.htmlDocument(title, html)], { type: 'text/html;charset=utf-8' });
+  }
+}
+
+async function convertPdf(file, target, opts) {
+  const title = file.name.replace(/\.[^.]+$/, '');
+  if (target === 'jpg' || target === 'png') return pdfToImages(file, target, opts.onProgress);
+  const blocks = await pdfToBlocks(file, opts.onProgress);
+  if (target === 'txt') return new Blob([blocksToText(blocks)], { type: 'text/plain;charset=utf-8' });
+  if (target === 'html') return new Blob([blocksToHtml(blocks, title)], { type: 'text/html;charset=utf-8' });
+  return blocksToDocx(blocks);
 }
 
 // ------------------------------------------------------------------ tables
@@ -414,6 +438,8 @@ export async function convert(file, info, target, opts = {}) {
       return convertDocument(file, ext, target);
     case 'table':
       return convertTable(file, ext, target);
+    case 'pdf':
+      return convertPdf(file, target, opts);
   }
   throw new Error('Unsupported file');
 }

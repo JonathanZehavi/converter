@@ -218,8 +218,14 @@ function renderRow(item) {
       break;
     case 'done': {
       meta.classList.add('done');
-      const name = C.outputName(item.file.name, item.target);
-      meta.textContent = `✓ ${name} · ${formatSize(item.result.size)}` + (item.note ? ` · ${item.note}` : '');
+      const note = item.note || item.result.note;
+      if (item.result.printable) {
+        meta.textContent = '✓ Ready · choose “Save as PDF” in the print dialog';
+        if (item.targets.length) actions.append(targetSelect(item));
+        actions.append(button('Save as PDF…', 'primary', () => printToPdf(item)));
+        break;
+      }
+      meta.textContent = `✓ ${resultName(item)} · ${formatSize(item.result.size)}` + (note ? ` · ${note}` : '');
       if (item.targets.length) actions.append(targetSelect(item));
       if (canShareFiles) actions.append(button('Share', '', () => share(item)));
       actions.append(button('Download', 'primary', () => download(item)));
@@ -331,17 +337,36 @@ async function run(item) {
   renderRow(item); refresh();
 }
 
+function resultName(item) {
+  return (item.result && item.result.fileName) || C.outputName(item.file.name, item.target);
+}
+
+/** Open the converted page and its print dialog, where "Save as PDF" writes a real PDF. */
+function printToPdf(item) {
+  const win = window.open(item.url, '_blank');
+  if (!win) {   // pop-up blocked: hand over the print-ready HTML instead
+    const a = document.createElement('a');
+    a.href = item.url;
+    a.download = C.outputName(item.file.name, 'html');
+    document.body.append(a); a.click(); a.remove();
+    return;
+  }
+  const go = () => setTimeout(() => { try { win.focus(); win.print(); } catch { /* user can press ⌘P */ } }, 300);
+  if (win.document && win.document.readyState === 'complete') go();
+  else win.addEventListener('load', go, { once: true });
+}
+
 function download(item) {
   const a = document.createElement('a');
   a.href = item.url;
-  a.download = C.outputName(item.file.name, item.target);
+  a.download = resultName(item);
   document.body.append(a);
   a.click();
   a.remove();
 }
 
 async function share(item) {
-  const file = new File([item.result], C.outputName(item.file.name, item.target), { type: item.result.type });
+  const file = new File([item.result], resultName(item), { type: item.result.type });
   try { await navigator.share({ files: [file] }); } catch { /* dismissed */ }
 }
 

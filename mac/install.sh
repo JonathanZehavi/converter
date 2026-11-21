@@ -12,19 +12,27 @@ cp "$ROOT/mac/convert.js" "$SUPPORT/"
 cp "$ROOT/shared/formats.js" "$ROOT/shared/table.js" "$SUPPORT/shared/"
 cp "$ROOT/shared/vendor/"*.js "$SUPPORT/shared/vendor/"
 
-# Build the "Convert to…" window (SwiftUI). Falls back to a plain dialog if this fails.
-rm -f "$SUPPORT/ConvertPicker"
-if xcrun --find swiftc >/dev/null 2>&1; then
-  echo "Building the Convert window (takes up to a minute)…"
-  if xcrun swiftc -O "$ROOT/mac/picker/main.swift" -o "$SUPPORT/ConvertPicker" 2>"$SUPPORT/build.log"; then
-    echo "✓ Window built"
+# Build the native helpers with the Xcode Command Line Tools:
+#   ConvertPicker  the "Convert to…" window (falls back to a plain dialog without it)
+#   DocTool        documents → PDF and PDF → Word / RTF / text / images
+build() {
+  local name="$1" source="$2"
+  rm -f "$SUPPORT/$name"
+  echo "Building $name (takes up to a minute)…"
+  if xcrun swiftc -O "$source" -o "$SUPPORT/$name" 2>"$SUPPORT/build-$name.log"; then
+    echo "✓ $name built"
   else
-    rm -f "$SUPPORT/ConvertPicker"
-    echo "⚠ Could not build the window — the basic dialog will be used. Errors:"
-    grep -m 15 "error:" "$SUPPORT/build.log" || tail -n 15 "$SUPPORT/build.log"
+    rm -f "$SUPPORT/$name"
+    echo "⚠ Could not build $name. Errors:"
+    grep -m 15 "error:" "$SUPPORT/build-$name.log" || tail -n 15 "$SUPPORT/build-$name.log"
   fi
+}
+if xcrun --find swiftc >/dev/null 2>&1; then
+  build ConvertPicker "$ROOT/mac/picker/main.swift"
+  build DocTool "$ROOT/mac/doctool/main.swift"
 else
-  echo "⚠ Swift compiler not found — using the basic dialog. For the nicer window run: xcode-select --install"
+  echo "⚠ Swift compiler not found — install it with: xcode-select --install"
+  echo "  (without it: basic dialog, and no PDF conversions)"
 fi
 
 rm -rf "$SERVICES/Convert.workflow"

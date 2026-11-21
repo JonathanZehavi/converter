@@ -28,7 +28,7 @@ var CONVERTER = (function () {
     document: {
       label: 'Document',
       inputs: ['docx', 'doc', 'odt', 'rtf', 'html', 'md', 'txt'],
-      targets: ['docx', 'doc', 'odt', 'rtf', 'html', 'txt']
+      targets: ['pdf', 'docx', 'doc', 'odt', 'rtf', 'html', 'txt']
     },
     table: {
       label: 'Data & Sheets',
@@ -38,7 +38,7 @@ var CONVERTER = (function () {
     pdf: {
       label: 'PDF',
       inputs: ['pdf'],
-      targets: [] // PDFs are merged, not converted (see canMerge)
+      targets: ['docx', 'rtf', 'txt', 'html', 'jpg', 'png'] // several PDFs can also be merged (canMerge)
     }
   };
 
@@ -64,6 +64,14 @@ var CONVERTER = (function () {
     odt: 'OpenDocument Text', rtf: 'Rich Text', html: 'Web Page', txt: 'Plain Text',
     md: 'Markdown', xlsx: 'Excel Workbook', ods: 'OpenDocument Sheet', csv: 'CSV Table',
     tsv: 'TSV Table', json: 'JSON', yaml: 'YAML'
+  };
+
+  // Labels that depend on the source: from a PDF only the text (and page images) can be recovered.
+  var SOURCE_LABELS = {
+    pdf: {
+      docx: 'Word · text only', rtf: 'Rich Text · text only', html: 'Web Page · text only',
+      txt: 'Plain Text', jpg: 'JPEG · one per page', png: 'PNG · one per page'
+    }
   };
 
   var MIME = {
@@ -177,7 +185,8 @@ var CONVERTER = (function () {
       seen[t] = true;
       return !supports || supports(ext, t, cat);
     }).map(function (t) {
-      return { ext: t, label: LABELS[t] || t.toUpperCase(), group: groupOf(t) };
+      var label = (SOURCE_LABELS[cat] && SOURCE_LABELS[cat][t]) || LABELS[t] || t.toUpperCase();
+      return { ext: t, label: label, group: groupOf(t) };
     });
   }
 
@@ -258,16 +267,27 @@ var CONVERTER = (function () {
     });
   }
 
-  /** A clean standalone HTML page around converted content. */
+  /** 'rtl' when most letters are Hebrew/Arabic, else 'ltr'. */
+  function textDirection(text) {
+    var rtl = (String(text).match(/[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/g) || []).length;
+    var ltr = (String(text).match(/[A-Za-z\u00C0-\u024F]/g) || []).length;
+    return rtl > ltr ? 'rtl' : 'ltr';
+  }
+
+  /** A clean standalone HTML page around converted content (print-ready, RTL-aware). */
   function htmlDocument(title, body) {
-    return '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n' +
+    var dir = textDirection(String(body).replace(/<[^>]*>/g, ' '));
+    return '<!DOCTYPE html>\n<html dir="' + dir + '">\n<head>\n<meta charset="utf-8">\n' +
       '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
       '<title>' + escapeHtml(title) + '</title>\n<style>\n' +
       'body{font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;' +
       'max-width:760px;margin:40px auto;padding:0 20px;color:#1d1d1f}\n' +
       'table{border-collapse:collapse}td,th{border:1px solid #d2d2d7;padding:6px 10px;text-align:left}\n' +
       'th{background:#f5f5f7}pre,code{background:#f5f5f7;border-radius:6px}pre{padding:12px;overflow:auto}\n' +
-      'img{max-width:100%}\n</style>\n</head>\n<body>\n' + body + '\n</body>\n</html>\n';
+      'img{max-width:100%}\n' +
+      'p,li,h1,h2,h3,h4,h5,h6,td,th,blockquote,pre{unicode-bidi:plaintext;text-align:start}\n' +
+      '@page{size:A4;margin:18mm}\n@media print{body{max-width:none;margin:0;padding:0}}\n' +
+      '</style>\n</head>\n<body>\n' + body + '\n</body>\n</html>\n';
   }
 
   return {
@@ -285,6 +305,7 @@ var CONVERTER = (function () {
     compareNames: compareNames,
     outputName: outputName,
     escapeHtml: escapeHtml,
+    textDirection: textDirection,
     htmlDocument: htmlDocument
   };
 })();
