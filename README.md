@@ -19,12 +19,12 @@ cd converter
 brew install ffmpeg      # Apple Silicon: needed for video and most audio (AVI→MP4, FLAC→MP3 …)
 ```
 
-**Intel Mac?** Homebrew no longer supports Intel, so install a static FFmpeg build instead:
+**Intel Mac?** Homebrew no longer supports Intel, so install a static FFmpeg build instead.
+In a browser, download the **ffmpeg** zip from <https://evermeet.cx/ffmpeg/> (its automated download URLs were shut down), unzip it, then:
 
 ```bash
-curl -L -o /tmp/ffmpeg.zip https://evermeet.cx/ffmpeg/getrelease/zip
-unzip -o /tmp/ffmpeg.zip -d /tmp
-sudo mkdir -p /usr/local/bin && sudo mv /tmp/ffmpeg /usr/local/bin/
+sudo mkdir -p /usr/local/bin && sudo mv ~/Downloads/ffmpeg /usr/local/bin/
+xattr -d com.apple.quarantine /usr/local/bin/ffmpeg
 ffmpeg -version
 ```
 

@@ -31,7 +31,9 @@ if ! command -v ffmpeg >/dev/null 2>&1 && [ ! -x /opt/homebrew/bin/ffmpeg ] && [
   if [ "$(uname -m)" = "arm64" ]; then
     echo "    brew install ffmpeg"
   else
-    echo "    (Intel Mac — Homebrew no longer supports it) download a static build:"
-    echo "    curl -L -o /tmp/ffmpeg.zip https://evermeet.cx/ffmpeg/getrelease/zip && unzip -o /tmp/ffmpeg.zip -d /tmp && sudo mkdir -p /usr/local/bin && sudo mv /tmp/ffmpeg /usr/local/bin/"
+    echo "    (Intel Mac — Homebrew no longer supports it)"
+    echo "    1. In a browser, download the ffmpeg zip from https://evermeet.cx/ffmpeg/ and unzip it"
+    echo "    2. sudo mkdir -p /usr/local/bin && sudo mv ~/Downloads/ffmpeg /usr/local/bin/"
+    echo "    3. xattr -d com.apple.quarantine /usr/local/bin/ffmpeg"
   fi
 fi
