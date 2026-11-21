@@ -244,7 +244,13 @@ func windowHeight(for payload: Payload) -> CGFloat {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    let payload: Payload
     var window: NSWindow!
+
+    init(payload: Payload) {
+        self.payload = payload
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let width: CGFloat = 580
@@ -272,7 +278,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 }
 
 let app = NSApplication.shared
-let delegate = AppDelegate()
+let delegate = AppDelegate(payload: payload)
 app.setActivationPolicy(.accessory)
 app.delegate = delegate
 app.run()
