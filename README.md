@@ -54,7 +54,8 @@ Static files, no build step. Locally:
 python3 -m http.server 8000   # then open http://localhost:8000/web/
 ```
 
-To publish: **Settings → Pages → Source: GitHub Actions**. The included workflow deploys on every push to `dev`.
+Hosted on **Vercel** from the repository root (Framework: *Other*, no build command, output directory `.`).
+Every push to `dev` deploys automatically. Keep the root as the project root: `web/` loads files from `../shared/`.
 
 Audio/video run on [ffmpeg.wasm](https://ffmpegwasm.netlify.app/). The ~30 MB engine is downloaded once from jsDelivr and cached; your files never leave the browser.
 
