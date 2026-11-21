@@ -19,12 +19,15 @@ cd converter
 brew install ffmpeg      # Apple Silicon: needed for video and most audio (AVI→MP4, FLAC→MP3 …)
 ```
 
-**Intel Mac?** Homebrew no longer supports Intel, so install a static FFmpeg build instead.
-In a browser, download the **ffmpeg** zip from <https://evermeet.cx/ffmpeg/> (its automated download URLs were shut down), unzip it, then:
+**Intel Mac?** Homebrew no longer supports Intel. Install the FFmpeg 7.1 Intel build that ships inside the
+[`imageio-ffmpeg`](https://pypi.org/project/imageio-ffmpeg/) package on PyPI (includes x264, vpx, lame, opus, vorbis, webp):
 
 ```bash
-sudo mkdir -p /usr/local/bin && sudo mv ~/Downloads/ffmpeg /usr/local/bin/
-xattr -d com.apple.quarantine /usr/local/bin/ffmpeg
+curl -fL -o /tmp/ffmpeg.whl https://files.pythonhosted.org/packages/f1/ef/e006996ba8735c1605b05fc931b7b49297cbdf11603259701bd0d62e17e1/imageio_ffmpeg-0.7.0-py3-none-macosx_10_9_intel.macosx_10_9_x86_64.whl
+unzip -o -j /tmp/ffmpeg.whl 'imageio_ffmpeg/binaries/ffmpeg-macos-x86_64-v7.1' -d /tmp
+sudo mkdir -p /usr/local/bin
+sudo mv /tmp/ffmpeg-macos-x86_64-v7.1 /usr/local/bin/ffmpeg
+sudo chmod +x /usr/local/bin/ffmpeg
 ffmpeg -version
 ```
 
