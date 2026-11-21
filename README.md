@@ -16,7 +16,16 @@ Two front-ends share one engine (`shared/`):
 git clone https://github.com/JonathanZehavi/converter.git
 cd converter
 ./mac/install.sh
-brew install ffmpeg      # needed for video and most audio (AVI→MP4, FLAC→MP3 …)
+brew install ffmpeg      # Apple Silicon: needed for video and most audio (AVI→MP4, FLAC→MP3 …)
+```
+
+**Intel Mac?** Homebrew no longer supports Intel, so install a static FFmpeg build instead:
+
+```bash
+curl -L -o /tmp/ffmpeg.zip https://evermeet.cx/ffmpeg/getrelease/zip
+unzip -o /tmp/ffmpeg.zip -d /tmp
+sudo mkdir -p /usr/local/bin && sudo mv /tmp/ffmpeg /usr/local/bin/
+ffmpeg -version
 ```
 
 Then right-click any file in Finder → **Quick Actions → Convert…**, pick a format, and the converted file appears next to the original.

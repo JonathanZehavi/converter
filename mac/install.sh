@@ -28,5 +28,10 @@ if ! command -v ffmpeg >/dev/null 2>&1 && [ ! -x /opt/homebrew/bin/ffmpeg ] && [
   echo
   echo "Images, documents and spreadsheets work now."
   echo "For video and most audio (AVI→MP4, FLAC→MP3…) install FFmpeg once:"
-  echo "    brew install ffmpeg"
+  if [ "$(uname -m)" = "arm64" ]; then
+    echo "    brew install ffmpeg"
+  else
+    echo "    (Intel Mac — Homebrew no longer supports it) download a static build:"
+    echo "    curl -L -o /tmp/ffmpeg.zip https://evermeet.cx/ffmpeg/getrelease/zip && unzip -o /tmp/ffmpeg.zip -d /tmp && sudo mkdir -p /usr/local/bin && sudo mv /tmp/ffmpeg /usr/local/bin/"
+  fi
 fi

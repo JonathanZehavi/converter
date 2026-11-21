@@ -183,7 +183,7 @@ function askToInstallFfmpeg() {
   try {
     var r = app.displayDialog(
       'This conversion needs FFmpeg — a free, open-source converter that runs entirely on your Mac.\n\n' +
-      'Install it once in Terminal with Homebrew:\n\n    brew install ffmpeg\n\n' +
+      'Install it once in Terminal — see the README (Apple Silicon: brew install ffmpeg; Intel: static build from evermeet.cx).\n\n' +
       '(No Homebrew yet? Get it from brew.sh)',
       { withTitle: TITLE, buttons: ['Cancel', 'Copy Command'], defaultButton: 'Copy Command', withIcon: 'caution' });
     if (r.buttonReturned === 'Copy Command') app.setTheClipboardTo('brew install ffmpeg');
