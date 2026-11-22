@@ -222,6 +222,15 @@ svg { display: block; }
 .empty h2 { margin: 18px 0 6px; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
 .empty p { margin: 0 0 22px; max-width: 360px; color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
 .drop-art svg { width: 96px; height: 96px; }
+.features { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: -6px 0 22px; }
+.feature {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--row); border: 0.5px solid var(--separator);
+  font-size: 12.5px; font-weight: 500;
+}
+.feature svg { width: 14px; height: 14px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.merge-bar.teaser { background: var(--row); }
 .drop-art .sheet { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 7 6; }
 .drop-art .arrow { fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
 .privacy {
@@ -426,6 +435,7 @@ svg { display: block; }
   .empty { min-height: 0; padding: 40px 24px 24px; }
   .empty h2 { font-size: 22px; }
   .empty p { font-size: 15px; }
+  .feature { font-size: 14px; padding: 8px 14px; }
   .empty .btn.large { display: none; }          /* the bottom bar has the button */
   .drop-art svg { width: 80px; height: 80px; }
 

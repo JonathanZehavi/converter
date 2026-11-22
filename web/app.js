@@ -289,11 +289,17 @@ function refresh() {
   $('subtitle').textContent = working || merging ? 'Converting on this device…' : 'Private · on-device';
 
   const mergeable = mergeCandidates();
-  $('mergeBar').hidden = mergeable.length < 2;
-  $('mergeTitle').textContent = merging ? 'Merging…' : `Merge ${mergeable.length} files into one PDF`;
+  // One PDF alone: show what's possible instead of hiding the feature.
+  const teaser = mergeable.length === 1 && mergeable[0].info.category === 'pdf';
+  $('mergeBar').hidden = mergeable.length < 2 && !teaser;
+  $('mergeBar').classList.toggle('teaser', teaser);
+  $('mergeBtn').hidden = teaser;
+  $('mergeTitle').textContent = merging ? 'Merging…'
+    : teaser ? 'Merge PDFs' : `Merge ${mergeable.length} files into one PDF`;
   $('mergeBtn').disabled = merging || working;
   const hint = $('mergeHint');
-  hint.textContent = mergeError || (isTouch ? 'Pages follow the list order. Use the arrows to reorder.' : 'Pages follow the list order. Drag rows to reorder.');
+  hint.textContent = mergeError || (teaser ? 'Add another PDF or image to combine them into one PDF.'
+    : isTouch ? 'Pages follow the list order. Use the arrows to reorder.' : 'Pages follow the list order. Drag rows to reorder.');
   hint.classList.toggle('error', !!mergeError);
 }
 
@@ -407,7 +413,7 @@ $('addBtn').addEventListener('click', openPicker);
 $('mAddBtn').addEventListener('click', openPicker);
 $('mConvertBtn').addEventListener('click', convertAll);
 if (isTouch) {
-  document.querySelector('.empty h2').textContent = 'Convert any file';
+  document.querySelector('.empty h2').textContent = 'Convert & merge files';
   $('mergeHint').textContent = 'Pages follow the list order. Use the arrows to reorder.';
 }
 $('convertAllBtn').addEventListener('click', convertAll);

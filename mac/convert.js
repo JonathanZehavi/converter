@@ -289,6 +289,7 @@ function pickTarget(known, unknown, targets) {
       ? (first.ext.toUpperCase() === kind ? kind + ' document' : first.ext.toUpperCase() + ' · ' + kind) + ' · ' + fileSize(first.path)
       : known.length + ' files' + (known.every(function (f) { return f.category === first.category; }) ? ' · ' + kind : '');
     if (unknown.length) subtitle += ' · ' + unknown.length + ' skipped';
+    if (known.length === 1 && first.category === 'pdf') subtitle += ' · Tip: select several PDFs to merge them';
     var payload = {
       path: first.path,
       name: known.length === 1 ? first.name : first.name + ' and ' + (known.length - 1) + ' more',
