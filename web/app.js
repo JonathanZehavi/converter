@@ -12,6 +12,8 @@ const ICONS = {
   pdf: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8 13h3M8 17h8"/>'
 };
 const X_ICON = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+const UP_ICON = '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+const isTouch = matchMedia('(pointer: coarse)').matches;
 
 const items = [];
 let nextId = 1;
@@ -86,12 +88,27 @@ function buildRow(item) {
     <div class="tile cat-${cat}">${ext.toUpperCase().slice(0, 4)}</div>
     <div class="file-info"><div class="file-name"></div><div class="file-meta"></div></div>
     <div class="file-actions"></div>
-    <button class="icon-btn remove" aria-label="Remove">${X_ICON}</button>`;
+    <div class="row-tools">
+      <button class="icon-btn move" aria-label="Move up">${UP_ICON}</button>
+      <button class="icon-btn remove" aria-label="Remove">${X_ICON}</button>
+    </div>`;
   li.querySelector('.file-name').textContent = item.file.name;
   li.querySelector('.file-name').title = item.file.name;
   li.querySelector('.remove').addEventListener('click', () => removeItem(item));
+  li.querySelector('.move').addEventListener('click', () => moveUp(item));
   enableReorder(li, item);
   return li;
+}
+
+/** Touch screens can't drag rows: an arrow moves a file one place up (it sets the merge order). */
+function moveUp(item) {
+  const i = items.indexOf(item);
+  if (i <= 0) return;
+  const above = items[i - 1];
+  items.splice(i, 1);
+  items.splice(i - 1, 0, item);
+  above.el.before(item.el);
+  refresh();
 }
 
 // ------------------------------------------------------------------ drag to reorder
@@ -261,6 +278,11 @@ function refresh() {
   $('window').classList.toggle('has-files', total > 0);
   $('content').classList.toggle('has-files', total > 0);
   $('convertAllBtn').disabled = pending === 0 || working;
+  $('mConvertBtn').hidden = pending === 0;
+  $('mConvertBtn').disabled = working;
+  $('mAddBtn').textContent = total ? 'Add More' : 'Choose Files';
+  $('mAddBtn').classList.toggle('primary', total === 0);
+  items.forEach((it, i) => { const m = it.el.querySelector('.move'); if (m) m.style.visibility = i === 0 ? 'hidden' : ''; });
   $('clearBtn').hidden = total === 0 || working;
   $('status').textContent = total === 0 ? 'No files'
     : `${total} file${total > 1 ? 's' : ''}` + (done ? ` · ${done} converted` : '');
@@ -271,7 +293,7 @@ function refresh() {
   $('mergeTitle').textContent = merging ? 'Merging…' : `Merge ${mergeable.length} files into one PDF`;
   $('mergeBtn').disabled = merging || working;
   const hint = $('mergeHint');
-  hint.textContent = mergeError || 'Pages follow the list order. Drag rows to reorder.';
+  hint.textContent = mergeError || (isTouch ? 'Pages follow the list order. Use the arrows to reorder.' : 'Pages follow the list order. Drag rows to reorder.');
   hint.classList.toggle('error', !!mergeError);
 }
 
@@ -382,6 +404,12 @@ function openPicker() { $('fileInput').click(); }
 $('fileInput').addEventListener('change', (e) => { addFiles([...e.target.files]); e.target.value = ''; });
 $('chooseBtn').addEventListener('click', openPicker);
 $('addBtn').addEventListener('click', openPicker);
+$('mAddBtn').addEventListener('click', openPicker);
+$('mConvertBtn').addEventListener('click', convertAll);
+if (isTouch) {
+  document.querySelector('.empty h2').textContent = 'Convert any file';
+  $('mergeHint').textContent = 'Pages follow the list order. Use the arrows to reorder.';
+}
 $('convertAllBtn').addEventListener('click', convertAll);
 $('mergeBtn').addEventListener('click', mergeAll);
 $('clearBtn').addEventListener('click', () => [...items].forEach(removeItem));

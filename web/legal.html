@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Privacy, Terms &amp; Licenses · Converter</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="icon-180.png">
+  <style>
+    :root {
+      --bg: #f5f5f7; --card: #ffffff; --text: #1d1d1f; --text-2: #6e6e73;
+      --line: rgba(0, 0, 0, 0.09); --accent: #0a84ff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #000000; --card: #1c1c1e; --text: #f5f5f7; --text-2: #a1a1a6; --line: rgba(255, 255, 255, 0.1);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    main { max-width: 720px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 32px) 16px 48px; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .back { display: inline-block; margin-bottom: 20px; font-size: 15px; }
+    h1 { font-size: 32px; letter-spacing: -0.02em; margin: 0 0 6px; }
+    .lead { color: var(--text-2); margin: 0 0 28px; }
+    section { background: var(--card); border: 0.5px solid var(--line); border-radius: 16px; padding: 20px 22px; margin-bottom: 16px; }
+    h2 { font-size: 20px; margin: 0 0 10px; letter-spacing: -0.01em; }
+    p, li { margin: 0 0 10px; }
+    ul { padding-left: 20px; margin: 0 0 10px; }
+    .table { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 0.5px solid var(--line); vertical-align: top; }
+    th { color: var(--text-2); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+    small { color: var(--text-2); }
+  </style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">‹ Converter</a>
+  <h1>Privacy, Terms &amp; Licenses</h1>
+  <p class="lead">Short version: your files are converted inside your browser and never sent anywhere.</p>
+
+  <section id="privacy">
+    <h2>Privacy</h2>
+    <ul>
+      <li><strong>Your files stay on your device.</strong> Every conversion and merge runs in your browser. Files are never uploaded, stored or seen by us.</li>
+      <li><strong>No accounts, no cookies, no analytics, no tracking.</strong></li>
+      <li><strong>Hosting.</strong> The site is served by <a href="https://vercel.com/legal/privacy-policy" rel="noopener">Vercel</a>. Like any web host, Vercel may record technical request data (such as IP address, browser and time) for security and operations.</li>
+      <li><strong>Audio &amp; video engine.</strong> The first audio or video conversion downloads the FFmpeg engine from the <a href="https://www.jsdelivr.com/terms/privacy-policy-jsdelivr-net" rel="noopener">jsDelivr</a> CDN. That request reveals your IP address to jsDelivr, as any download would. Your files are not part of it.</li>
+    </ul>
+  </section>
+
+  <section id="terms">
+    <h2>Terms of use</h2>
+    <ul>
+      <li>Converter is a free tool provided <strong>“as is”</strong>, without warranties of any kind. Check converted files before relying on them. Your original files are never changed.</li>
+      <li>Only convert or merge files you have the right to use. You are responsible for the content you process.</li>
+      <li>Converter does not remove passwords, encryption or copy protection. Password-protected PDFs are refused.</li>
+      <li>Converting from PDF recovers text, not layout: tables, columns and exact positioning may be lost.</li>
+      <li>To the extent permitted by law, the authors are not liable for any loss or damage arising from use of the tool.</li>
+      <li>Converter is an independent project, not affiliated with or endorsed by Apple Inc. Mac and macOS are trademarks of Apple Inc.</li>
+    </ul>
+  </section>
+
+  <section id="licenses">
+    <h2>Open-source licenses</h2>
+    <p>Converter is built on these open-source projects. Thank you to their authors.</p>
+    <div class="table">
+      <table>
+        <thead><tr><th>Component</th><th>Used for</th><th>License</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://github.com/ffmpegwasm/ffmpeg.wasm/tree/v0.12.10" rel="noopener">FFmpeg core (ffmpeg.wasm) 0.12.10</a></td><td>Audio &amp; video</td><td>GPL-2.0-or-later</td></tr>
+          <tr><td><a href="https://github.com/ffmpegwasm/ffmpeg.wasm" rel="noopener">@ffmpeg/ffmpeg 0.12.15, @ffmpeg/util 0.12.2</a></td><td>Engine loader</td><td>MIT</td></tr>
+          <tr><td><a href="https://github.com/mozilla/pdf.js" rel="noopener">PDF.js 4.10.38</a></td><td>Reading PDFs</td><td>Apache-2.0</td></tr>
+          <tr><td><a href="https://github.com/Hopding/pdf-lib" rel="noopener">pdf-lib 1.17.1</a></td><td>Merging PDFs</td><td>MIT</td></tr>
+          <tr><td><a href="https://github.com/mwilliamson/mammoth.js" rel="noopener">mammoth 1.8.0</a></td><td>Reading Word files</td><td>BSD-2-Clause</td></tr>
+          <tr><td><a href="https://github.com/Stuk/jszip" rel="noopener">JSZip 3.10.1</a></td><td>Writing Word files &amp; zips</td><td>MIT (dual MIT / GPL-3.0)</td></tr>
+          <tr><td><a href="https://github.com/SheetJS/sheetjs" rel="noopener">SheetJS 0.18.5</a></td><td>Spreadsheets</td><td>Apache-2.0</td></tr>
+          <tr><td><a href="https://github.com/markedjs/marked" rel="noopener">marked 15</a></td><td>Markdown</td><td>MIT</td></tr>
+          <tr><td><a href="https://github.com/nodeca/js-yaml" rel="noopener">js-yaml 4</a></td><td>YAML</td><td>MIT</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><small>The FFmpeg core is loaded unmodified from jsDelivr. Its complete source code is available at the linked release and at <a href="https://ffmpeg.org/download.html" rel="noopener">ffmpeg.org</a>. FFmpeg is a trademark of Fabrice Bellard.</small></p>
+  </section>
+</main>
+</body>
+</html>

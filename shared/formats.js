@@ -69,8 +69,8 @@ var CONVERTER = (function () {
   // Labels that depend on the source: from a PDF only the text (and page images) can be recovered.
   var SOURCE_LABELS = {
     pdf: {
-      docx: 'Word · text only', rtf: 'Rich Text · text only', html: 'Web Page · text only',
-      txt: 'Plain Text', jpg: 'JPEG · one per page', png: 'PNG · one per page'
+      docx: 'Word (text only)', rtf: 'Rich Text (text only)', html: 'Web page (text only)',
+      txt: 'Plain Text', jpg: 'JPEG, per page', png: 'PNG, per page'
     }
   };
 
